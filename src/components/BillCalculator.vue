@@ -112,12 +112,24 @@
                       :input-value="isItemSelected(person, item)"
                       style="margin: 0;"
                   ></v-checkbox>
-                  <v-list-item-title style="font-size: 1rem; padding: 5px; margin-top: -20px;">{{
-                      item.name
-                    }}
+                  <v-list-item-title style="font-size: 1rem; padding: 5px; margin-top: -20px;">
+                    {{ item.name }}
                   </v-list-item-title>
-                  <v-list-item-subtitle style="font-size: 0.85rem; margin-top: -20px;">{{ item.price }} смн.
+                  <v-list-item-subtitle style="font-size: 0.85rem; margin-top: -20px;">
+                    {{ item.price }} смн.
                   </v-list-item-subtitle>
+                  <v-text-field
+                      v-if="isItemSelected(person, item)"
+                      label="Порции"
+                      type="number"
+                      min="0"
+                      step="0.5"
+                      dense
+                      hide-details
+                      class="pa-0"
+                      style="font-size: 0.75rem; width: 50px;"
+                      @input="event => setPortion(person, item, event)"
+                  ></v-text-field>
                 </v-list-item-action>
               </v-list-item-group>
             </v-list>
@@ -149,11 +161,19 @@
             <div id="report" class="report-container">
               <div class="report-header">
                 <div class="report-header-cell">Имя</div>
+                <div class="report-header-cell">Блюда</div>
                 <div class="report-header-cell">Сумма</div>
               </div>
               <div class="report-body">
                 <div v-for="person in selectedPeople" :key="person" class="report-row">
                   <div class="report-cell">{{ person }}</div>
+                  <div class="report-cell">
+                    <ul>
+                      <li v-for="item in personItems[person]" :key="item.name">
+                        {{ item.name }} - {{ item.price }} смн. x {{ getPortion(person, item) }} порций
+                      </li>
+                    </ul>
+                  </div>
                   <div class="report-cell">{{ calculateTotal(person).toFixed(2) }} смн.</div>
                 </div>
               </div>
@@ -174,10 +194,9 @@
 </template>
 
 <script>
-// import { toPng } from 'html-to-image';
 import {reactive} from "vue";
 import html2canvas from "html2canvas";
-// import $ from 'jquery';
+
 export default {
   data() {
     return {
@@ -202,7 +221,6 @@ export default {
         'Диловар  Юнусов',
         'Изатилло  Ганиев',
         'Искандар Юнусов',
-        'Искандархоча  Насуллоев',
         'Манучехр  Музафаров',
         'Машхурахон  Набиева',
         'Мирзоакмал  Султонов',
@@ -232,10 +250,21 @@ export default {
       ],
       selectedPeople: [],
       items: [],
-      personItems: reactive({})
+      personItems: reactive({}),
+      portions: {} // Хранение количества порций для каждого человека и блюда
     };
   },
   methods: {
+    getPortion(person, item) {
+      return this.portions[person] && this.portions[person][item.name] ? this.portions[person][item.name] : 1;
+    },
+    setPortion(person, item, event) {
+      const value = Number(event.target.value);
+      if (!this.portions[person]) {
+        this.portions[person] = {};
+      }
+      this.portions[person][item.name] = value;
+    },
     onPeopleSelect() {
       this.selectedPeople.forEach(person => {
         if (!this.personItems[person]) {
@@ -264,7 +293,11 @@ export default {
     calculateTotal(person) {
       if (!this.personItems[person]) return 0;
 
-      const itemsTotal = this.personItems[person].reduce((total, item) => total + item.price, 0);
+      const itemsTotal = this.personItems[person].reduce((total, item) => {
+        const portions = this.portions[person]?.[item.name] || 1;
+        return total + (item.price * portions);
+      }, 0);
+
       const share = this.calculateShare();
       return itemsTotal + share;
     },
@@ -292,22 +325,11 @@ export default {
     updateCosts() {
       // Обновление стоимости продуктов и обслуживания
     },
-    // async shareViaWebShare() {
-    //   const reportContent = this.prepareReportContent();
-    //   try {
-    //     await navigator.share({
-    //       title: 'Отчет',
-    //       text: reportContent,
-    //       url: ''
-    //     });
-    //   } catch (error) {
-    //     console.error('Ошибка при попытке поделиться:', error);
-    //   }
-    // },
-    // prepareReportContent() {
-    //   return this.selectedPeople.map(person => `${person}: ${this.calculateTotal(person).toFixed(2)} смн.`).join('\n') +
-    //       `\n\nОбщая сумма: ${this.calculateOverallTotal().toFixed(2)} смн.`;
-    // },
+    updatePersonItems() {
+      for (const person of this.selectedPeople) {
+        this.personItems[person] = this.selectedItems[person] || [];
+      }
+    },
     async generateImage() {
 
       const reportElement = document.querySelector("#report");
@@ -317,7 +339,7 @@ export default {
           console.log('Generating image for element:', reportElement);
 
           html2canvas(reportElement, {
-            backgroundColor: '#ffffff', // Установить фон, если нужно
+            backgroundColor: '#ffffff', // Установить фон
             scale: 2 // Масштаб для улучшения качества изображения
           }).then(canvas => {
             const dataUrl = canvas.toDataURL('image/png');
@@ -336,10 +358,16 @@ export default {
       } else {
         console.error('Элемент отчета не найден в DOM или не является элементом HTML.');
       }
-    }
+    },
   },
   watch: {
-    selectedPeople: 'onPeopleSelect'
+    selectedPeople: 'onPeopleSelect',
+    selectedItems: {
+      handler() {
+        this.updatePersonItems();
+      },
+      deep: true
+    }
   }
 };
 </script>
