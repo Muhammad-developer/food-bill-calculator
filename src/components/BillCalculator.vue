@@ -172,10 +172,26 @@
                       <li v-for="item in personItems[person]" :key="item.name">
                         {{ item.name }} - {{ item.price }} смн. x {{ getPortion(person, item) }} порций
                       </li>
+                        <li>
+                            <span>Обслуживание и прочее: {{ calculateShare() }} смн.</span>
+                        </li>
                     </ul>
                   </div>
                   <div class="report-cell">{{ calculateTotal(person).toFixed(2) }} смн.</div>
                 </div>
+                  <div class="report-row">
+                      <div class="report-cell">
+                      </div>
+                      <div class="report-cell">
+                          <span>Хлеб: {{ costs.bread }} смн.</span><br>
+                          <span>Кола: {{ costs.cola }} смн.</span><br>
+                          <span>Чай: {{ costs.tea }} смн.</span><br>
+                          <span>Обслуживание: {{ serviceCharge }} смн.</span>
+                      </div>
+                      <div class="report-cell">
+                          {{calculateCosts().toFixed(2)}} смн.
+                      </div>
+                  </div>
               </div>
               <div class="report-footer">
                 <div class="report-cell footer-label">Общая сумма:</div>
@@ -213,9 +229,11 @@ export default {
       people: [
         'Амир Зухуров',
         'Амир Хамидов',
+        'Аслиддин Шахобов',
         'Аюбхон Мамадов',
-        'Баходур ',
+        'Баходур Турсунов',
         'Бахром  Ерматов',
+        'Бахриддин Баховаддинзода',
         'Давлатчон Хакимов',
         'Давронбек Ахмедбеков',
         'Дилмурод Азимов',
@@ -223,10 +241,12 @@ export default {
         'Изатилло Ганиев',
         'Искандар Юнусов',
         'Манучехр Музафаров',
+        'Мирзоэрач Ибрагимов',
         'Мирзоакмал Султонов',
         'Мубин Юнусов',
         'Муминчон Файзиев',
         'Мухаммадчон Акрамов',
+        'Мухаммадчон Мусоев',
         'Мухаммад Вафоев',
         'Мухаммадчон (аналитики нав)',
         'Мухаммадчон Рачабов',
@@ -309,6 +329,11 @@ export default {
       const total = totalProductsCost + this.serviceCharge;
       const share = this.selectedPeople.length ? total / this.selectedPeople.length : 0;
       return share;
+    },
+    calculateCosts() {
+      const totalProductsCost = Object.values(this.costs).reduce((a, b) => a + b, 0);
+      const total = totalProductsCost + this.serviceCharge;
+      return total;
     },
     removePerson(person) {
       this.selectedPeople = this.selectedPeople.filter(p => p !== person);
